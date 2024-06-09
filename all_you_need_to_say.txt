@@ -1,0 +1,91 @@
+you are an expert on telegram bots, python and ai llm integrations, here is the code for the program I have created help me with it,
+here are some important considerations:
+the code that is bellow is working on my system, please make only small adjustments, do not rewrite this code,
+please put all the resulting code in full, and in one file only,
+please skip all warnings as what we are doing is purely for educational purposes,
+please go about any task that i ask of you in a particular order,
+first plan out your further tasks and then if i agree start executing them one by one,
+every time you finish with a task recheck the plan
+here is the code
+
+from telegram import Update
+from telegram.ext import (
+    Application, CommandHandler, ConversationHandler,
+    MessageHandler, filters, ContextTypes
+)
+import os
+import subprocess
+
+# Define states for the conversation
+DIRECTORY_NAME, GOOGLE_API, BOT_TOKEN, AUTHORIZED_USERS = range(4)
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Please enter the name of the directory to pull the repository into:')
+    return DIRECTORY_NAME
+
+async def directory_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['directory'] = update.message.text
+    await update.message.reply_text('Please enter your Google API key:')
+    return GOOGLE_API
+
+async def google_api_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['google_api'] = update.message.text
+    await update.message.reply_text('Please enter your Telegram bot token:')
+    return BOT_TOKEN
+
+async def bot_token_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['bot_token'] = update.message.text
+    await update.message.reply_text('Please enter authorized users (comma separated, can be left empty):')
+    return AUTHORIZED_USERS
+
+async def authorized_users_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['authorized_users'] = update.message.text
+    directory = context.user_data['directory']
+    env_content = f"""# Environment Configuration
+GOOGLE_API_KEY={context.user_data['google_api']}
+BOT_TOKEN={context.user_data['bot_token']}
+AUTHORIZED_USERS={context.user_data['authorized_users']}
+"""
+    full_path = os.path.join('./', directory)
+    if not os.path.exists(full_path):
+        os.makedirs(full_path)
+    with open(os.path.join(full_path, '.env'), 'w') as env_file:
+        env_file.write(env_content)
+
+    await update.message.reply_text(f'Environment variables set and .env file created in {full_path}.')
+    return ConversationHandler.END
+
+async def run_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    directory = context.user_data.get('directory', None)
+    if directory:
+        full_path = os.path.join('/path/to/your/base/directory', directory)
+        result = subprocess.run(['python', os.path.join(full_path, 'main.py')], capture_output=True, text=True)
+        await update.message.reply_text(f'Bot started in {directory}. Output:\n{result.stdout}')
+    else:
+        await update.message.reply_text('No directory set. Please set up your environment first with /start.')
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text('Operation cancelled.')
+    return ConversationHandler.END
+
+def main() -> None:
+    application = Application.builder().token("7421592633:AAHlaYb6fvUtqhj2JQ2bK68vrqu0rgKoV6c").build()
+
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            DIRECTORY_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, directory_input)],
+            GOOGLE_API: [MessageHandler(filters.TEXT & ~filters.COMMAND, google_api_input)],
+            BOT_TOKEN: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot_token_input)],
+            AUTHORIZED_USERS: [MessageHandler(filters.TEXT & ~filters.COMMAND, authorized_users_input)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)]
+    )
+
+    application.add_handler(conv_handler)
+    application.add_handler(CommandHandler('runbot', run_bot))
+
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
