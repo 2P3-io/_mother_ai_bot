@@ -19,11 +19,8 @@ from io import BytesIO
 def new_chat(context: ContextTypes.DEFAULT_TYPE):
     # Read the text file
     with open('all_you_need_to_say.txt', 'r', encoding='utf-8') as file:
-        text = file.read()
-
-    # Clean the text by replacing newlines with spaces and stripping leading/trailing spaces
-    clean_text = ''.join(text.split())
-
+        clean_text = file.read()
+        
     # Initialize a new chat using the cleaned text
     context.chat_data["chat"] = model.start_chat(history=[
         {
