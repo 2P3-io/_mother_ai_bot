@@ -1,5 +1,5 @@
 import asyncio
-from gemini_pro_bot.llm import model, img_model
+from bot_insides.llm import model, img_model
 from google.generativeai.types.generation_types import (
     StopCandidateException,
     BlockedPromptException,
@@ -10,7 +10,7 @@ from telegram.ext import (
 )
 from telegram.error import NetworkError, BadRequest
 from telegram.constants import ChatAction, ParseMode
-from gemini_pro_bot.html_format import format_message
+from bot_insides.html_format import format_message
 import PIL.Image as load_image
 from io import BytesIO
 
@@ -22,7 +22,9 @@ def new_chat(context: ContextTypes.DEFAULT_TYPE):
         text = file.read()
 
     # Clean the text by replacing newlines with spaces and stripping leading/trailing spaces
-    clean_text = ''.join(text.split())
+
+    clean_text = str(text)
+    #clean_text = ''.join(text.split())
 
     # Initialize a new chat using the cleaned text
     context.chat_data["chat"] = model.start_chat(history=[
